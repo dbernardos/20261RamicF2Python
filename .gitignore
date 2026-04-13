@@ -1,0 +1,53 @@
+# ── Ambiente Virtual ──
+venv/
+.venv/
+env/
+
+# ── Python / Django Cache ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ── Banco de Dados Local ──
+# db.sqlite3
+# db.sqlite3-journal
+
+# ── Arquivos de Usuário / Mídia ──
+media/
+
+# ── Arquivos Estáticos Gerados ──
+staticfiles/
+
+# ── Variáveis de Ambiente e Segredos ──
+.env
+.env.*
+!.env.example
+*.secret
+*.key
+
+# ── IDEs e Editores ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Sistema Operacional ──
+.DS_Store
+Thumbs.db
+
+# ── Logs e Testes ──
+*.log
+logs/
+htmlcov/
+.coverage
+coverage.xml
+.pytest_cache/
+
+# ── Distribuição / Build ──
+dist/
+build/
+*.egg-info/
+.eggs/

@@ -1,0 +1,112 @@
+.container {
+    max-width: 144rem;
+    margin: 0 auto;
+    padding: 3rem;
+}
+
+.main-header-container {
+    background: #13141f;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Roboto Slab', serif;
+}
+
+.main-logo {
+    font-size: 4rem;
+    color: #fff;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.menu-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 255px;
+    min-height: 100vh;
+    overflow-y: auto;
+    background-color: #269fe6;
+    z-index: 2;
+    transition: all 300ms ease-in-out;
+}
+
+.menu-container a {
+    color: #fff;
+}
+
+.menu-nav {
+    display: flex;
+    flex-flow: column wrap;
+    font-family: 'Robolo Slab', serif;
+    font-size: 1rem;
+}
+
+.menu-nav a{
+    width: 100%;
+    padding: 1rem;
+}
+
+.hidden-text {
+    display: none;
+}
+
+.button-show-menu{
+    position: fixed;
+    left: 265px;
+    top: 0;
+    color: #fff;
+    background-color: #269fe6;
+    border: none;
+    font-size: 2rem;
+    z-index: 3;
+    padding: 1rem;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 300ms ease-in-out;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+}
+
+.button-close-menu {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    color: #fff;
+    background: none;
+    border: none;
+    font-size: 2rem;
+    z-index: 3;
+    cursor: pointer;
+}
+
+.button-show-menu-visible {
+    visibility: visible;
+    opacity: 1;
+    left: 5px;
+}
+
+.menu-hidden {
+    left: -255px;
+}
+
+.btn-comprar {
+    float: right;
+}
+
+.boasvindas {
+    float: right;
+    font-size: 1rem;
+    color: #fff;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    margin: 0 auto;
+}

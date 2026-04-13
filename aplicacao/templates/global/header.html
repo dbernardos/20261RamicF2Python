@@ -1,0 +1,17 @@
+<header class="main-header-container">
+    <div class="main-header container">
+        <h1>
+            <a class="main-logo" href="{% url 'urlindex' %}">
+                <i class="fa-solid fa-bolt main-logo-icon"></i>
+                <span class="main-logo-text">Ramic</span>
+            </a>
+        </h1>
+
+        <div class="boasvindas">
+            {% if user.is_authenticated %}
+                <span class="text-welcome">Bem vindo, {{ user.username }}</span>
+                {% comment %} <i class="fa-solid fa-cart-shopping"></i> {% endcomment %}
+            {% endif %}
+        </div>
+    </div>
+</header>

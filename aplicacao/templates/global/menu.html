@@ -1,0 +1,22 @@
+<button class="button-show-menu button-show-menu-visible">
+  <i class="fas fa-bars"></i>
+  <span class="hidden-text">Show menu</span>
+</button>
+
+<div class="menu-container menu-hidden">
+  <button class="button-close-menu button-close-menu-visible">
+    <i class="fas fa-times-circle"></i>
+    <span class="hidden-text">Close menu</span>
+  </button>
+
+  <div class="menu-content">
+    <nav class="menu-nav">
+      {% if user.is_authenticated %}
+        <a href="{% url 'urlindex' %}">Home</a>
+        <a href="{% url 'urlsair' %}">Logout</a>
+      {% else %}
+        <a href="{% url 'urlentrar' %}">Login</a>
+      {% endif %}
+    </nav>
+  </div>
+</div>

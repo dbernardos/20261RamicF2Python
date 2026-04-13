@@ -1,0 +1,39 @@
+{% load bootstrap5 %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    {% bootstrap_css %}
+</head>
+<body>
+    <div class="container">
+        <h1>Página de Login</h1>
+
+        <form action="{% url 'urlentrar' %}" method="POST">
+            {% csrf_token %}
+            <div class="mb-3">
+                <input type="text" name="txtUser" placeholder="Digite o seu usuário..." class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <input type="password" name="txtPass" placeholder="Digite a sua senha..." class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <input type="submit" value="🏃‍♂️‍➡️ Entrar" class="btn btn-primary">
+                <a href="{% url 'urlcadastrarUsuario' %}" class="btn btn-success">➕ Cadastrar</a>
+            </div>
+        </form>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-danger">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+</body>
+</html>
