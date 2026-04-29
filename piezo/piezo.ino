@@ -1,42 +1,35 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <PubSubClient.h>
-//#include <String.h>
 
-#define FS 5000
-#define TEMPO 2
-#define N (FS * TEMPO)
-
-#define INTERVALO 10000
-
-// DAVI INICIO
-
-int buttonPin = D6;
-int lastButtonState = LOW;
-
+// ================= CONFIGURAÇÕES DE REDE =================
 // Configurações de rede
 const char* ssid = "Ramic_Local_IoT_Router";
+const char* password = "ramic123";
 //const char* ssid = "trojan";
 //const char* password = "myREDE01";
-const char* password = "ramic123";
 
-// Configurações MQTT
+// ================= CONFIGURAÇÕES MQTT =================
 //const char* mqtt_server = "10.71.131.144";
 const char* mqtt_server = "10.42.0.1";
 const int mqtt_port = 1883;
 const char* mqtt_user = "ramic";
 const char* mqtt_password = "123456";
-
-// Tópicos que o ESP32 vai escutar
-//const char* topic1 = "motor/a110";
-const char* topic1 = "dados/mpu";
-const char* topic2 = "configuracao/#"; // wildcard
-const char* topic_pub_motor = "motor/status";   // publica status
+const char* mqtt_subscribe_topic = "comando/sensor"; // Tópico para receber comandos
+const char* mqtt_publish_topic = "dados/sensor";    // Tópico para publicar dados
+const char* mqtt_publish_status = "status/sensor";   // publica status
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// DAVI FIM
+// ================= CONFIGURAÇÕES LEONARDO =================
+#define FS 5000
+#define TEMPO 2
+#define N (FS * TEMPO)
+#define INTERVALO 10000
+
+int buttonPin = D6;
+int lastButtonState = LOW;
 
 volatile uint16_t buffer[N];
 volatile int indice = 0;
@@ -44,9 +37,7 @@ volatile bool aquisicaoCompleta = false;
 
 unsigned long ultimoCiclo = 0;
 
-//String clientId = "ESP8266-" + String(ESP.getChipId());
-//clientId += String(ESP.getChipId());
-
+// ================= FUNÇÃO ONTIMER =================
 //void IRAM_ATTR onTimer() {
 void onTimer() {
   if (indice < N) {
@@ -59,61 +50,54 @@ void onTimer() {
   }
 }
 
+// ================= FUNÇÃO DE AQUISIÇÃO =================
 void iniciarAquisicao() {
   indice = 0;
   aquisicaoCompleta = false;
 
-  Serial.print("Davi inicio...");
   timer1_attachInterrupt(onTimer);
-  Serial.print("Davi meio...");
   timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP);
-  Serial.print("Davi fim...");
-
   // 80 MHz / 16 = 5 MHz
   // 5 MHz → 1 tick = 0.2 µs
   // 200 µs / 0.2 µs = 1000 ticks
-
   timer1_write(1000);
 }
 
-void enviarCSV() {
-  Serial.println("amostra,valor");
+// ================= FUNÇÃO PARA IMPRIMIR O RESULTADO =================
+void imprimirDados() {
+  //String mensagem = "";
 
+  Serial.println("amostra,valor");
   for (int i = 0; i < N; i++) {
     Serial.print(i);
     Serial.print(",");
     Serial.println(buffer[i]);
+    //mensagem += (char)buffer[i];
   }
-
-  Serial.println("FIM");
 }
 
+// ================= FUNÇÃO SETUP =================
 void setup() {
-  pinMode (buttonPin, INPUT_PULLUP);
+  pinMode(buttonPin, INPUT_PULLUP);
   Serial.begin(115200);
-  delay(2000);
-
   Serial.println("Sistema pronto");
 
-  // INICIO DAVI
-  // Conecta ao Wi-Fi
   WiFi.begin(ssid, password);
   Serial.print("Conectando ao Wi-Fi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\n Conectado ao Wi-Fi");
+  Serial.println("\nConectado ao Wi-Fi");
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 
-  // Configura o cliente MQTT
+  Serial.print("Congigurando servidor MQTT");
   client.setServer(mqtt_server, mqtt_port);
- // client.setCallback(callback);
-  // FIM DAVI
-
+  client.setBufferSize(2048); 
 }
 
+// ================= FUNÇÃO DE LOOP =================
 void loop() {
 
   if (!client.connected()) {
@@ -125,8 +109,8 @@ void loop() {
   if (buttonState != lastButtonState) {
     delay(50); // debounce simples
     if (buttonState == LOW) { // ativo baixo (pressionado)
-      Serial.println("Botão pressionado → publicando ligado");
-      client.publish(topic_pub_motor, "botao ligado");
+      Serial.println("Botão pressionado -> publicando ligado");
+      client.publish(mqtt_publish_status, "botao ligado");
       // COMECAR NOVA COLETA 
       if (millis() - ultimoCiclo >= INTERVALO) {
         Serial.println("Iniciando aquisicao");
@@ -134,44 +118,34 @@ void loop() {
         while (!aquisicaoCompleta) {
           yield();
         }
-        Serial.println("Enviando dados CSV");
-        enviarCSV();
-
-        Serial.println("amostra,valor");
-
-        for (int i = 0; i < N; i++) {
-          Serial.print(i);
-          Serial.print(",");
-          Serial.println(buffer[i]);
-          Serial.println(buffer[i]);
-          client.publish(topic_pub_motor, ""+buffer[i]);
-        }
-
-        Serial.println("FIM");
+        
+        imprimirDados();
+        
+        Serial.print("Enviando dados: ");
+        Serial.println(mqtt_publish_topic);
+        client.publish(mqtt_publish_topic, (uint8_t*)buffer, sizeof(buffer));
 
         Serial.println("Aquisicao finalizada");
         ultimoCiclo = millis();
       }
     } else {
-      Serial.println("Botão solto → publicando desligado");
-      client.publish(topic_pub_motor, "botao desligado");
+      Serial.println("Botão solto -> publicando desligado");
+      client.publish(mqtt_publish_status, "botao desligado");
     }
     lastButtonState = buttonState;
   }
 }
 
-
+// ================= FUNÇÃO DE CONEXÃO =================
 void reconnect() {
   while (!client.connected()) {
     Serial.print("Tentando conectar ao MQTT...");
-    // Nome do cliente deve ser único na rede MQTT
     if (client.connect("ESP8266Client", mqtt_user, mqtt_password)) {
     //Serial.print(String(ESP.getChipId()));
     //if (client.connect("ESP8266-8285683", mqtt_user, mqtt_password)){
-      Serial.println(" Conectado ao broker MQTT");
-      client.subscribe(topic1);
-      client.subscribe(topic2);
-      client.publish(topic_pub_motor, "botao inicializado");
+      Serial.println("Conectado ao broker MQTT");
+      client.subscribe(mqtt_subscribe_topic);
+      client.publish(mqtt_publish_status, "botao inicializado");
     } else {
       Serial.print(" Falhou, rc=");
       Serial.print(client.state());
