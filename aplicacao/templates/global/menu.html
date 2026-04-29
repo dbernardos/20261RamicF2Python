@@ -13,6 +13,8 @@
     <nav class="menu-nav">
       {% if user.is_authenticated %}
         <a href="{% url 'urlindex' %}">Home</a>
+        <a href="{% url 'urlcoleta' %}">Nova Coleta</a>
+        <a href="{% url 'urlhistorico' %}">Histórico</a>
         <a href="{% url 'urlsair' %}">Logout</a>
       {% else %}
         <a href="{% url 'urlentrar' %}">Login</a>

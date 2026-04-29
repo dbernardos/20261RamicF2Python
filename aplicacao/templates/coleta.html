@@ -1,0 +1,30 @@
+{% extends 'global/base.html' %}
+{% block content %}
+  <div class="container mt-4">
+    <h2>📥 Nova Coleta de Vibração</h2>
+    {% if messages %}
+      {% for msg in messages %}
+        <p style="color: {% if msg.tags == 'error' %}
+            red
+          {% else %}
+            green
+          {% endif %}; margin:10px 0;">{{ msg }}</p>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" style="max-width:600px;">
+      {% csrf_token %}
+      <label>ID do Motor:</label><br />
+      <input type="text" name="motor_id" value="MOTOR_01" style="width:100%; padding:6px; margin-bottom:15px;" required /><br />
+
+      <label>Vetor de Vibração (JSON com 10.000 valores):</label><br />
+      <textarea name="vibration_data" rows="8" style="width:100%; font-family:monospace;" placeholder="[1.23, 4.56, 7.89, ...]"></textarea><br />
+
+      <button type="submit" style="margin-top:15px; padding:10px 20px; background:#2563eb; color:#fff; border:none; border-radius:6px; cursor:pointer;">💾 Salvar Coleta</button>
+    </form>
+
+    <p style="margin-top:20px; font-size:0.9em; color:#555;">
+      ⚠️ <strong>Nota para produção:</strong> Colar 10k valores em um <code>textarea</code> é inviável em campo. Recomenda-se substituir por <code>&lt;input type="file"&gt;</code> (upload de <code>.csv</code> ou <code>.json</code>) ou expor um endpoint REST para recebimento via <code>fetch()</code>/MQTT.
+    </p>
+  </div>
+{% endblock %}

@@ -12,6 +12,47 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import io, urllib, base64
 
+# vibration/views.py
+import json
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .models import VibrationCollection
+
+def historico(request):
+    collections = VibrationCollection.objects.all()
+    return render(request, 'historico.html', {'collections': collections})
+
+def coleta(request):
+    if request.method == 'POST':
+        motor_id = request.POST.get('motor_id', 'MOTOR_01').strip()
+        raw_data = request.POST.get('vibration_data', '').strip()
+        
+        try:
+            data_list = json.loads(raw_data)
+            if not isinstance(data_list, list) or len(data_list) != 10000:
+                messages.error(request, "O vetor deve conter exatamente 10.000 valores numéricos.")
+                return redirect('urlcoleta')
+                
+            # Validação básica de tipos
+            if not all(isinstance(x, (int, float)) for x in data_list):
+                messages.error(request, "Todos os valores devem ser numéricos.")
+                return redirect('urlcoleta')
+
+            VibrationCollection.objects.create(
+                motor_id=motor_id,
+                vibration_data=data_list,
+                status='pending'
+            )
+            messages.success(request, "Coleta registrada com sucesso!")
+            return redirect('urlhistorico')
+            
+        except json.JSONDecodeError:
+            messages.error(request, "Formato inválido. Envie uma lista JSON válida (ex: [1.2, 3.4, ...]).")
+            return redirect('urlcoleta')
+            
+    return render(request, 'coleta.html')
+
+
 # ---------------------- CONFIGURAÇÕES MQTT: DAVI ----------------------
 def mqtt_pub_view(comando):
     cliente = MqttClient()
