@@ -65,7 +65,7 @@ void iniciarAquisicao() {
 
 // ================= FUNÇÃO PARA IMPRIMIR O RESULTADO =================
 void imprimirDados() {
-  //String mensagem = "";
+  char mensagem[100];
 
   Serial.println("amostra,valor");
   for (int i = 0; i < N; i++) {
@@ -73,6 +73,23 @@ void imprimirDados() {
     Serial.print(",");
     Serial.println(buffer[i]);
     //mensagem += (char)buffer[i];
+    sprintf(mensagem, "%d", buffer[i]);
+    client.publish(mqtt_publish_topic, mensagem);
+  }
+}
+
+
+void enviarBlocos(){
+  char mensagem[100];
+  int idx = 0;
+
+  for (int i = 0; i < N; i++) {
+    idx += sprintf(mensagem + idx, "%d", buffer[i]);
+    
+    if(idx > 20){
+      client.publish(mqtt_publish_topic, mensagem);
+      idx = 0;
+    }
   }
 }
 
@@ -120,10 +137,13 @@ void loop() {
         }
         
         imprimirDados();
-        
+
         Serial.print("Enviando dados: ");
         Serial.println(mqtt_publish_topic);
-        client.publish(mqtt_publish_topic, (uint8_t*)buffer, sizeof(buffer));
+        //client.publish(mqtt_publish_topic, (uint8_t*)buffer, sizeof(buffer));
+        //client.publish(mqtt_publish_topic, (byte*)buffer, sizeof(buffer));
+        //enviarBlocos();
+        client.publish(mqtt_publish_topic, "mensagem<<<<<<<");
 
         Serial.println("Aquisicao finalizada");
         ultimoCiclo = millis();
@@ -139,11 +159,11 @@ void loop() {
 // ================= FUNÇÃO DE CONEXÃO =================
 void reconnect() {
   while (!client.connected()) {
-    Serial.print("Tentando conectar ao MQTT...");
+    Serial.print("\nTentando conectar ao MQTT...");
     if (client.connect("ESP8266Client", mqtt_user, mqtt_password)) {
     //Serial.print(String(ESP.getChipId()));
     //if (client.connect("ESP8266-8285683", mqtt_user, mqtt_password)){
-      Serial.println("Conectado ao broker MQTT");
+      Serial.println("\nConectado ao broker MQTT");
       client.subscribe(mqtt_subscribe_topic);
       client.publish(mqtt_publish_status, "botao inicializado");
     } else {
