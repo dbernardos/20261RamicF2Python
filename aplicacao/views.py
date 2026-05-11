@@ -23,6 +23,10 @@ def historico(request):
     collections = VibrationCollection.objects.all()
     return render(request, 'historico.html', {'collections': collections})
 
+def coleta2(request):
+     mqtt_pub_view("coletar")
+     return render(request, 'index.html')
+
 def coleta(request):
     if request.method == 'POST':
         motor_id = request.POST.get('motor_id', 'MOTOR_01').strip()
@@ -60,7 +64,7 @@ def mqtt_pub_view(comando):
     cliente.connect()
 
     #payload = json.dumps({"comando": comando})
-    cliente.publish("motor/a110", comando)
+    cliente.publish("comando/sensor", comando)
 
 # ---------------------- AÇÕES ----------------------
 # @login_required
@@ -126,8 +130,8 @@ def cadastrarUsuario(request):
 def get_dataframe():
     # Busca todos os dados do banco e retorna um DataFrame do Pandas
     # dados = VibrationCollection.objects.all().values()
-    dados = VibrationCollection.objects.filter(motor_id="MOTOR_02").values()
-    df = pd.DataFrame(dados)
+    dados = VibrationCollection.objects.filter(motor_id="MOTOR_03").values()
+    df = pd.DataFrame(list(dados))  
     # data = {"timestamp": datetime.now()}
     # df = pd.read_json(json.dumps(list(dados)), orient='records')
     return df
@@ -142,14 +146,19 @@ def plot_to_base64(fig):
 
 def grafico(request):
     df = get_dataframe()
+    df['vibration_data_float'] = pd.to_numeric(df['coluna'], errors='coerce')
+
     context = {
-        'grafico': geragraficos(df['vibration_data'])
+        'grafico': geragraficos(df['vibration_data_float'])
     }
     return render(request, 'grafico.html', context)
 
 
 def geragraficos(dfa, eixo='x', cor='blue', posicao='Axial', intervalo_grade=60):
     fs = 1000  # frequência de amostragem HZ
+
+    print(dfa.info())
+
     signal = dfa.values
     signal = signal - np.mean(signal)
     

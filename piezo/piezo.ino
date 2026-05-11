@@ -30,6 +30,8 @@ PubSubClient client(espClient);
 
 int buttonPin = D6;
 int lastButtonState = LOW;
+String message = "";
+bool isCollecting = false; // Variável de controle de coleta
 
 volatile uint16_t buffer[N];
 volatile int indice = 0;
@@ -111,6 +113,7 @@ void setup() {
 
   Serial.print("Congigurando servidor MQTT");
   client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(callback); // Define a função de callback para mensagens recebidas
   client.setBufferSize(2048); 
 }
 
@@ -123,9 +126,9 @@ void loop() {
   client.loop(); // escuta mensagens
   int buttonState = digitalRead(buttonPin);
 
-  if (buttonState != lastButtonState) {
+  if (buttonState != lastButtonState || isCollecting) {
     delay(50); // debounce simples
-    if (buttonState == LOW) { // ativo baixo (pressionado)
+    if (buttonState == LOW || isCollecting) { // ativo baixo (pressionado)
       Serial.println("Botão pressionado -> publicando ligado");
       client.publish(mqtt_publish_status, "botao ligado");
       // COMECAR NOVA COLETA 
@@ -148,6 +151,7 @@ void loop() {
         Serial.println("Aquisicao finalizada");
         ultimoCiclo = millis();
       }
+      isCollecting = false;
     } else {
       Serial.println("Botão solto -> publicando desligado");
       client.publish(mqtt_publish_status, "botao desligado");
@@ -172,5 +176,21 @@ void reconnect() {
       Serial.println(" - Tentando novamente em 3s");
       delay(3000);
     }
+  }
+}
+
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  // Converte o payload para uma string
+  for (unsigned int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+  
+  // Verifica se a mensagem recebida é "coletar" no tópico de comando
+  if (String(topic) == mqtt_subscribe_topic && message == "coletar") {
+    Serial.println("Comando 'coletar' recebido. Iniciando coleta...");
+    isCollecting = true;
+    // sampleIndex = 0; // Reinicia o índice para uma nova coleta
+    // previousMicros = micros(); // Sincroniza o tempo inicial
   }
 }
