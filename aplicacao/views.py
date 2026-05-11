@@ -6,6 +6,7 @@ from django.contrib import messages
 from .form import UsuarioForm
 from .mqtt_client import MqttClient
 from django.urls import reverse
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -84,10 +85,12 @@ def mqtt_pub_view(comando):
     # q = request.POST.get('q', '')
     # return redirect(f"{reverse('painel')}?q={q}")
 
+# ---------------------- Index ----------------------
 @login_required(login_url="urlentrar")
 def index(request):
     return render(request, 'index.html')
 
+# ---------------------- Entrar ----------------------
 def entrar(request):
     if request.method == "GET":
         return render(request, "entrar.html")
@@ -102,10 +105,12 @@ def entrar(request):
         messages.error(request, "Falha na autenticação!")    
         return render(request, 'entrar.html')
 
+# ---------------------- Sair ----------------------
 def sair(request):
     logout(request)
     return redirect('urlentrar')
 
+# ---------------------- Novo usuário ----------------------
 def cadastrarUsuario(request):
     if request.method == "GET":
         form = UsuarioForm()
@@ -117,11 +122,33 @@ def cadastrarUsuario(request):
             form.save()
             return redirect('urlentrar')
 
+# ---------------------- Gráficos ----------------------
+def get_dataframe():
+    # Busca todos os dados do banco e retorna um DataFrame do Pandas
+    # dados = VibrationCollection.objects.all().values()
+    dados = VibrationCollection.objects.filter(motor_id="MOTOR_02").values()
+    df = pd.DataFrame(dados)
+    # data = {"timestamp": datetime.now()}
+    # df = pd.read_json(json.dumps(list(dados)), orient='records')
+    return df
+
+def plot_to_base64(fig):
+    # Converte uma figura Matplotlib para uma string base64 para ser usada no HTML
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0)
+    string = base64.b64encode(buf.read())
+    return urllib.parse.quote(string)
+
 def grafico(request):
-    return render(request, 'grafico.html')
+    df = get_dataframe()
+    context = {
+        'grafico': geragraficos(df['vibration_data'])
+    }
+    return render(request, 'grafico.html', context)
 
 
-def geragraficos(dfa, eixo, cor, posicao, intervalo_grade, arquivo):
+def geragraficos(dfa, eixo='x', cor='blue', posicao='Axial', intervalo_grade=60):
     fs = 1000  # frequência de amostragem HZ
     signal = dfa.values
     signal = signal - np.mean(signal)
@@ -141,7 +168,7 @@ def geragraficos(dfa, eixo, cor, posicao, intervalo_grade, arquivo):
     # Plotar
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(xf, magnitude, color=cor, linewidth=1.5)
-    plt.title(f'{arquivo}: Espectro de Frequência - Eixo {eixo} ({posicao})', fontsize=14, fontweight='bold')
+    plt.title(f'Espectro de Frequência - Eixo {eixo} ({posicao})', fontsize=14, fontweight='bold')
     ax.set_xlabel('Frequência (Hz)', fontsize=12)
     ax.set_ylabel('Magnitude', fontsize=12)
     ax.set_xlim(0, fs/2)
@@ -153,4 +180,7 @@ def geragraficos(dfa, eixo, cor, posicao, intervalo_grade, arquivo):
     ax.grid(True, axis='x', linestyle='-', linewidth=0.8, color='gray', alpha=0.5)
     ax.grid(True, axis='y', linestyle='-', linewidth=0.8, color='gray', alpha=0.5)
     plt.tight_layout()
-    return plt
+    grafico_base64 = plot_to_base64(plt.gcf())
+    plt.close(fig)  # Fecha a figura para liberar memória
+
+    return grafico_base64

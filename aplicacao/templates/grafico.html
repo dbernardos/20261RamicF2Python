@@ -7,5 +7,17 @@
 {% block content %}
   <div class="container mt-4">
    
+    <div class="row">
+      <div class="col-lg-10 mb-4">
+        <div class="card h-100">
+          <div class="card-header">Distribuição das notas</div>
+          <div class="card-body">
+            {% if grafico %}
+              <img src="data:image/png;base64,{{ grafico }}" class="img-fluid" alt="aaa" />
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 {% endblock %}
