@@ -21,10 +21,12 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from .models import VibrationCollection
 
+@login_required(login_url="urlentrar")
 def historico(request):
     collections = VibrationCollection.objects.all()
     return render(request, 'historico.html', {'collections': collections})
 
+@login_required(login_url="urlentrar")
 def coletaManual(request):
     if request.method == 'POST':
         motor_id = request.POST.get('motor_id', 'MOTOR_01').strip()
@@ -57,6 +59,7 @@ def coletaManual(request):
 
 
 # ---------------------- CONFIGURAÇÕES MQTT ----------------------
+@login_required(login_url="urlentrar")
 def coleta(request):
     comando = "coletar"
     topico = "comando/sensor"
@@ -64,29 +67,6 @@ def coleta(request):
     cliente.connect()
     cliente.publish(topico, comando)
     return render(request, 'index.html')
-
-# ---------------------- AÇÕES ----------------------
-# @login_required
-# def ligar_motor(request, motor_id):
-#     mqtt_pub_view("ligar")
-#     motor = get_object_or_404(Motor, id=motor_id)
-#     motor.ligado = True
-#     motor.save()
-#     LogAcionamento.objects.create(motor=motor, acao="LIGADO", usuario=request.user)
-    
-#     q = request.POST.get('q', '')
-#     return redirect(f"{reverse('painel')}?q={q}")
-
-# @login_required
-# def desligar_motor(request, motor_id):
-#     mqtt_pub_view("desligar")
-#     motor = get_object_or_404(Motor, id=motor_id)
-#     motor.ligado = False
-#     motor.save()
-#     LogAcionamento.objects.create(motor=motor, acao="DESLIGADO", usuario=request.user)
-
-    # q = request.POST.get('q', '')
-    # return redirect(f"{reverse('painel')}?q={q}")
 
 # ---------------------- Index ----------------------
 @login_required(login_url="urlentrar")
@@ -144,13 +124,13 @@ def plot_to_base64(fig):
     string = base64.b64encode(buf.read())
     return urllib.parse.quote(string)
 
+@login_required(login_url="urlentrar")
 def grafico(request, pk):
     df = get_dataframe(pk)
     context = {
            'grafico': geragraficos(df['vibration'])
     }
     return render(request, 'grafico.html', context)
-
 
 def geragraficos(dfa, eixo='x', cor='blue', posicao='Axial', intervalo_grade=60):
     fs = 1000  # frequência de amostragem HZ
@@ -189,3 +169,26 @@ def geragraficos(dfa, eixo='x', cor='blue', posicao='Axial', intervalo_grade=60)
     plt.close(fig)  # Fecha a figura para liberar memória
 
     return grafico_base64
+
+# ---------------------- AÇÕES ----------------------
+# @login_required
+# def ligar_motor(request, motor_id):
+#     mqtt_pub_view("ligar")
+#     motor = get_object_or_404(Motor, id=motor_id)
+#     motor.ligado = True
+#     motor.save()
+#     LogAcionamento.objects.create(motor=motor, acao="LIGADO", usuario=request.user)
+    
+#     q = request.POST.get('q', '')
+#     return redirect(f"{reverse('painel')}?q={q}")
+
+# @login_required
+# def desligar_motor(request, motor_id):
+#     mqtt_pub_view("desligar")
+#     motor = get_object_or_404(Motor, id=motor_id)
+#     motor.ligado = False
+#     motor.save()
+#     LogAcionamento.objects.create(motor=motor, acao="DESLIGADO", usuario=request.user)
+
+    # q = request.POST.get('q', '')
+    # return redirect(f"{reverse('painel')}?q={q}")

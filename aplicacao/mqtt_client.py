@@ -27,8 +27,9 @@ class MqttClient:
         if rc == 0:
             logger.info("✅ Conectado ao broker MQTT")
             # Inscreva-se nos tópicos aqui
-            client.subscribe("meuapp/sensor/temperatura")
-            client.subscribe("meuapp/dispositivos/#")
+            client.subscribe("dados/sensor")
+            # client.subscribe("meuapp/sensor/temperatura")
+            # client.subscribe("meuapp/dispositivos/#")
         else:
             logger.error(f"❌ Falha na conexão MQTT, código: {rc}")
 
@@ -45,16 +46,16 @@ class MqttClient:
         Função personalizada para lidar com mensagens recebidas.
         Exemplo: Salvar no banco, disparar sinais, atualizar modelos, etc.
         """
-        from .models import SensorData  # Importe aqui para evitar circular import no início
+        from .models import VibrationCollection  # Importe aqui para evitar circular import no início
 
-        if topic == "meuapp/sensor/temperatura":
+        if topic == "dados/sensor":
             data = json.loads(payload)
-            SensorData.objects.create(
-                sensor_id=data.get('sensor_id'),
-                temperatura=data.get('temperatura'),
-                timestamp=data.get('timestamp')
+            VibrationCollection.objects.create(
+                motor_id=data.get('motor_id', 'MOTOR_01'),
+                vibration_data=data.get('vibration_data'), # ISSO PRECISA AJUSTAR (como esses dados sao coletados um a um, talvez criar uma lista aqui)
+                status='pending'
             )
-            logger.info("✅ Dados de temperatura salvos no banco.")
+            logger.info("✅ Dados de vibração salvos no banco.")
 
     def on_disconnect(self, client, userdata, rc):
         logger.warning("⚠️ Desconectado do broker MQTT")
