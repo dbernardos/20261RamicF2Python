@@ -9,10 +9,11 @@ urlpatterns = [
     path('sair', views.sair, name="urlsair"),
     path('cadastrarUsuario', views.cadastrarUsuario, name="urlcadastrarUsuario"),
     path('geraraficos', views.geragraficos, name="urlgeragraficos"),
-    path('grafico', views.grafico, name="urlgrafico"),
+    path('grafico/<int:pk>/', views.grafico, name="urlgrafico"),
     
     path('historico/', views.historico, name='urlhistorico'),
-    path('coleta/', views.coleta2, name='urlcoleta'),
+    path('coleta/', views.coleta, name='urlcoleta'),
+    path('coletaManual/', views.coletaManual, name='urlcoletaManual'),
 
 ]
 

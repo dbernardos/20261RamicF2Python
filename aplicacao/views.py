@@ -6,12 +6,14 @@ from django.contrib import messages
 from .form import UsuarioForm
 from .mqtt_client import MqttClient
 from django.urls import reverse
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import io
+import urllib, base64
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import io, urllib, base64
 
 # vibration/views.py
 import json
@@ -23,11 +25,7 @@ def historico(request):
     collections = VibrationCollection.objects.all()
     return render(request, 'historico.html', {'collections': collections})
 
-def coleta2(request):
-     mqtt_pub_view("coletar")
-     return render(request, 'index.html')
-
-def coleta(request):
+def coletaManual(request):
     if request.method == 'POST':
         motor_id = request.POST.get('motor_id', 'MOTOR_01').strip()
         raw_data = request.POST.get('vibration_data', '').strip()
@@ -58,13 +56,14 @@ def coleta(request):
     return render(request, 'coleta.html')
 
 
-# ---------------------- CONFIGURAÇÕES MQTT: DAVI ----------------------
-def mqtt_pub_view(comando):
+# ---------------------- CONFIGURAÇÕES MQTT ----------------------
+def coleta(request):
+    comando = "coletar"
+    topico = "comando/sensor"
     cliente = MqttClient()
     cliente.connect()
-
-    #payload = json.dumps({"comando": comando})
-    cliente.publish("comando/sensor", comando)
+    cliente.publish(topico, comando)
+    return render(request, 'index.html')
 
 # ---------------------- AÇÕES ----------------------
 # @login_required
@@ -127,13 +126,14 @@ def cadastrarUsuario(request):
             return redirect('urlentrar')
 
 # ---------------------- Gráficos ----------------------
-def get_dataframe():
+def get_dataframe(id):
     # Busca todos os dados do banco e retorna um DataFrame do Pandas
     # dados = VibrationCollection.objects.all().values()
-    dados = VibrationCollection.objects.filter(motor_id="MOTOR_03").values()
-    df = pd.DataFrame(list(dados))  
-    # data = {"timestamp": datetime.now()}
-    # df = pd.read_json(json.dumps(list(dados)), orient='records')
+    # dados = VibrationCollection.objects.filter(pk=id).values()
+    dados = get_object_or_404(VibrationCollection, pk=id)
+    print(dados)
+    df = pd.DataFrame(data=dados.vibration_data, columns=['vibration'])
+    # df = pd.DataFrame(data=dados['vibration_data'], columns=['vibration']) 
     return df
 
 def plot_to_base64(fig):
@@ -144,20 +144,16 @@ def plot_to_base64(fig):
     string = base64.b64encode(buf.read())
     return urllib.parse.quote(string)
 
-def grafico(request):
-    df = get_dataframe()
-    df['vibration_data_float'] = pd.to_numeric(df['coluna'], errors='coerce')
-
+def grafico(request, pk):
+    df = get_dataframe(pk)
     context = {
-        'grafico': geragraficos(df['vibration_data_float'])
+           'grafico': geragraficos(df['vibration'])
     }
     return render(request, 'grafico.html', context)
 
 
 def geragraficos(dfa, eixo='x', cor='blue', posicao='Axial', intervalo_grade=60):
     fs = 1000  # frequência de amostragem HZ
-
-    print(dfa.info())
 
     signal = dfa.values
     signal = signal - np.mean(signal)
