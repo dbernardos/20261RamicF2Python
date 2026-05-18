@@ -47,14 +47,16 @@ class MqttClient:
         Exemplo: Salvar no banco, disparar sinais, atualizar modelos, etc.
         """
         from .models import VibrationCollection  # Importe aqui para evitar circular import no início
-
+        print('>>>>>> vai receber')
         if topic == "dados/sensor":
+            print('>>>>>> recebendo <<<<<')
             data = json.loads(payload)
             VibrationCollection.objects.create(
                 motor_id=data.get('motor_id', 'MOTOR_01'),
                 vibration_data=data.get('vibration_data'), # ISSO PRECISA AJUSTAR (como esses dados sao coletados um a um, talvez criar uma lista aqui)
                 status='pending'
             )
+            print('>>>>>> passou do banco <<<<<')
             logger.info("✅ Dados de vibração salvos no banco.")
 
     def on_disconnect(self, client, userdata, rc):

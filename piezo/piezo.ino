@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <PubSubClient.h>
+#include <ArduinoJson.h>
 
 // ================= CONFIGURAÇÕES DE REDE =================
 // Configurações de rede
@@ -26,7 +27,7 @@ PubSubClient client(espClient);
 #define FS 5000
 #define TEMPO 2
 #define N (FS * TEMPO)
-#define INTERVALO 10000
+#define INTERVALO 1000
 
 int buttonPin = D6;
 int lastButtonState = LOW;
@@ -38,6 +39,9 @@ volatile int indice = 0;
 volatile bool aquisicaoCompleta = false;
 
 unsigned long ultimoCiclo = 0;
+
+StaticJsonDocument<INTERVALO> doc;
+doc["motor_id"] = "MOTOR_09";
 
 // ================= FUNÇÃO ONTIMER =================
 //void IRAM_ATTR onTimer() {
@@ -68,16 +72,25 @@ void iniciarAquisicao() {
 // ================= FUNÇÃO PARA IMPRIMIR O RESULTADO =================
 void imprimirDados() {
   char mensagem[100];
-
+  JsonArray vib = doc.createNestedArray("vibration_data");
   Serial.println("amostra,valor");
   for (int i = 0; i < N; i++) {
     Serial.print(i);
     Serial.print(",");
     Serial.println(buffer[i]);
     //mensagem += (char)buffer[i];
-    sprintf(mensagem, "%d", buffer[i]);
-    client.publish(mqtt_publish_topic, mensagem);
+    //sprintf(mensagem, "%d", buffer[i]);
+    //client.publish(mqtt_publish_topic, mensagem);
+	vib.add(mensagem)
   }
+  
+  //vib.add(1.2); vib.add(3.4); vib.add(5.6);  // seus dados
+  
+  char buffer[INTERVALO];
+  serializeJson(doc, buffer);
+  
+  mqttClient.publish(mqtt_publish_topic, buffer);  // JSON válido
+  
 }
 
 
@@ -193,4 +206,17 @@ void callback(char* topic, byte* payload, unsigned int length) {
     // sampleIndex = 0; // Reinicia o índice para uma nova coleta
     // previousMicros = micros(); // Sincroniza o tempo inicial
   }
+}
+
+void publishVibrationData() {
+  StaticJsonDocument<256> doc;
+  doc["motor_id"] = "MOTOR_09";
+  
+  JsonArray vib = doc.createNestedArray("vibration_data");
+  vib.add(1.2); vib.add(3.4); vib.add(5.6);  // seus dados
+  
+  char buffer[256];
+  serializeJson(doc, buffer);
+  
+  mqttClient.publish("dados/sensor", buffer);  // JSON válido
 }

@@ -66,6 +66,7 @@ def coleta(request):
     cliente = MqttClient()
     cliente.connect()
     cliente.publish(topico, comando)
+
     return render(request, 'index.html')
 
 # ---------------------- Index ----------------------
