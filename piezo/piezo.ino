@@ -40,8 +40,9 @@ volatile bool aquisicaoCompleta = false;
 
 unsigned long ultimoCiclo = 0;
 
-StaticJsonDocument<INTERVALO> doc;
-doc["motor_id"] = "MOTOR_09";
+StaticJsonDocument<256> doc;
+//doc["motor_id"] = "MOTOR_09";
+
 
 // ================= FUNÇÃO ONTIMER =================
 //void IRAM_ATTR onTimer() {
@@ -79,9 +80,9 @@ void imprimirDados() {
     Serial.print(",");
     Serial.println(buffer[i]);
     //mensagem += (char)buffer[i];
-    //sprintf(mensagem, "%d", buffer[i]);
+    sprintf(mensagem, "%d", buffer[i]);
     //client.publish(mqtt_publish_topic, mensagem);
-	vib.add(mensagem)
+	vib.add(mensagem);
   }
   
   //vib.add(1.2); vib.add(3.4); vib.add(5.6);  // seus dados
@@ -89,7 +90,7 @@ void imprimirDados() {
   char buffer[INTERVALO];
   serializeJson(doc, buffer);
   
-  mqttClient.publish(mqtt_publish_topic, buffer);  // JSON válido
+  client.publish(mqtt_publish_topic, buffer);  // JSON válido
   
 }
 
@@ -218,5 +219,5 @@ void publishVibrationData() {
   char buffer[256];
   serializeJson(doc, buffer);
   
-  mqttClient.publish("dados/sensor", buffer);  // JSON válido
+  client.publish("dados/sensor", buffer);  // JSON válido
 }
