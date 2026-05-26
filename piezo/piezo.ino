@@ -4,54 +4,49 @@
 #include <ArduinoJson.h>
 
 // ================= CONFIGURAÇÕES DE REDE =================
-// Configurações de rede
 const char* ssid = "Ramic_Local_IoT_Router";
 const char* password = "ramic123";
-//const char* ssid = "trojan";
-//const char* password = "myREDE01";
 
 // ================= CONFIGURAÇÕES MQTT =================
-//const char* mqtt_server = "10.71.131.144";
 const char* mqtt_server = "10.42.0.1";
 const int mqtt_port = 1883;
 const char* mqtt_user = "ramic";
 const char* mqtt_password = "123456";
-const char* mqtt_subscribe_topic = "comando/sensor"; // Tópico para receber comandos
-const char* mqtt_publish_topic = "dados/sensor";    // Tópico para publicar dados
-const char* mqtt_publish_status = "status/sensor";   // publica status
+const char* mqtt_subscribe_topic = "comando/sensor";
+const char* mqtt_publish_topic = "dados/sensor";
+const char* mqtt_publish_status = "status/sensor";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// ================= CONFIGURAÇÕES LEONARDO =================
-#define FS 5000
-#define TEMPO 2
-#define N (FS * TEMPO)
-#define INTERVALO 1000
+// ================= CONFIGURAÇÕES DE AQUISIÇÃO =================
+#define FS        5000          // Frequência de amostragem (Hz)
+#define TEMPO     2             // Duração da coleta (segundos)
+#define N         (FS * TEMPO)  // Total de amostras = 10.000
+#define INTERVALO 1000          // Intervalo mínimo entre ciclos (ms)
 
-int buttonPin = D6;
-int lastButtonState = LOW;
-String message = "";
-bool isCollecting = false; // Variável de controle de coleta
-
-volatile uint16_t buffer[N];
+// FIX 1: Renomeado de "buffer" para "amostras" para evitar conflito de nome
+// com o buffer local que existia em imprimirDados()
+volatile uint16_t amostras[N];
 volatile int indice = 0;
 volatile bool aquisicaoCompleta = false;
 
+int buttonPin = D6;
+int lastButtonState = LOW;
+bool isCollecting = false;
+
 unsigned long ultimoCiclo = 0;
 
-StaticJsonDocument<256> doc;
-//doc["motor_id"] = "MOTOR_09";
-
+// FIX 2: motor_id movido para constante global, fora do documento JSON
+// para não ser recriado a cada publicação
+const char* motor_id = "MOTOR_09";
 
 // ================= FUNÇÃO ONTIMER =================
-//void IRAM_ATTR onTimer() {
 void onTimer() {
   if (indice < N) {
-    buffer[indice] = analogRead(A0);
+    amostras[indice] = analogRead(A0);
     indice++;
-  } 
-  else {
+  } else {
     timer1_disable();
     aquisicaoCompleta = true;
   }
@@ -64,49 +59,53 @@ void iniciarAquisicao() {
 
   timer1_attachInterrupt(onTimer);
   timer1_enable(TIM_DIV16, TIM_EDGE, TIM_LOOP);
-  // 80 MHz / 16 = 5 MHz
-  // 5 MHz → 1 tick = 0.2 µs
-  // 200 µs / 0.2 µs = 1000 ticks
+  // 80 MHz / 16 = 5 MHz → 1 tick = 0.2 µs
+  // Para 5000 Hz: período = 200 µs → 200 / 0.2 = 1000 ticks
   timer1_write(1000);
 }
 
-// ================= FUNÇÃO PARA IMPRIMIR O RESULTADO =================
-void imprimirDados() {
-  char mensagem[100];
-  JsonArray vib = doc.createNestedArray("vibration_data");
-  Serial.println("amostra,valor");
-  for (int i = 0; i < N; i++) {
-    Serial.print(i);
-    Serial.print(",");
-    Serial.println(buffer[i]);
-    //mensagem += (char)buffer[i];
-    sprintf(mensagem, "%d", buffer[i]);
-    //client.publish(mqtt_publish_topic, mensagem);
-	vib.add(mensagem);
-  }
-  
-  //vib.add(1.2); vib.add(3.4); vib.add(5.6);  // seus dados
-  
-  char buffer[INTERVALO];
-  serializeJson(doc, buffer);
-  
-  client.publish(mqtt_publish_topic, buffer);  // JSON válido
-  
-}
+// ================= PUBLICAÇÃO EM BLOCOS =================
+// FIX 3: Substituída a função imprimirDados() que tentava serializar
+// 10.000 amostras num único JSON (estouro de memória e payload MQTT).
+// Agora os dados são enviados em blocos de BLOCO_SIZE amostras por mensagem.
+// O broker local recebe todos os blocos e pode reassemblá-los pelo campo "bloco".
 
+#define BLOCO_SIZE 100   // Amostras por mensagem MQTT (ajuste conforme necessário)
+// Tamanho estimado por mensagem: ~700 bytes — bem abaixo do limite de 2048
 
-void enviarBlocos(){
-  char mensagem[100];
-  int idx = 0;
+void publicarEmBlocos() {
+  int totalBlocos = (N + BLOCO_SIZE - 1) / BLOCO_SIZE;
 
-  for (int i = 0; i < N; i++) {
-    idx += sprintf(mensagem + idx, "%d", buffer[i]);
-    
-    if(idx > 20){
-      client.publish(mqtt_publish_topic, mensagem);
-      idx = 0;
+  for (int b = 0; b < totalBlocos; b++) {
+    // FIX 4: Documento JSON recriado a cada bloco para evitar fragmentação de memória
+    StaticJsonDocument<1024> doc;
+    doc["motor_id"] = motor_id;
+    doc["bloco"]    = b;
+    doc["total"]    = totalBlocos;
+
+    JsonArray vib = doc.createNestedArray("vibration_data");
+
+    int inicio = b * BLOCO_SIZE;
+    int fim    = min(inicio + BLOCO_SIZE, N);
+
+    for (int i = inicio; i < fim; i++) {
+      // FIX 5: Adicionado como inteiro (não string) — mais compacto e correto
+      vib.add((int)amostras[i]);
     }
+
+    // FIX 6: Buffer local com nome distinto "jsonBuf" — sem conflito com "amostras"
+    char jsonBuf[1024];
+    serializeJson(doc, jsonBuf, sizeof(jsonBuf));
+    client.publish(mqtt_publish_topic, jsonBuf);
+
+    // Pequena pausa para não sobrecarregar o broker e o stack TCP do ESP8266
+    delay(10);
+    client.loop();
   }
+
+  Serial.print("Publicados ");
+  Serial.print((N + BLOCO_SIZE - 1) / BLOCO_SIZE);
+  Serial.println(" blocos MQTT.");
 }
 
 // ================= FUNÇÃO SETUP =================
@@ -125,49 +124,43 @@ void setup() {
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 
-  Serial.print("Congigurando servidor MQTT");
   client.setServer(mqtt_server, mqtt_port);
-  client.setCallback(callback); // Define a função de callback para mensagens recebidas
-  client.setBufferSize(2048); 
+  client.setCallback(callback);
+  client.setBufferSize(2048);
 }
 
 // ================= FUNÇÃO DE LOOP =================
 void loop() {
-
   if (!client.connected()) {
     reconnect();
   }
-  client.loop(); // escuta mensagens
+  client.loop();
+
   int buttonState = digitalRead(buttonPin);
 
   if (buttonState != lastButtonState || isCollecting) {
-    delay(50); // debounce simples
-    if (buttonState == LOW || isCollecting) { // ativo baixo (pressionado)
-      Serial.println("Botão pressionado -> publicando ligado");
+    delay(50); // debounce
+    if (buttonState == LOW || isCollecting) {
+      Serial.println("Botão pressionado / comando recebido");
       client.publish(mqtt_publish_status, "botao ligado");
-      // COMECAR NOVA COLETA 
+
       if (millis() - ultimoCiclo >= INTERVALO) {
-        Serial.println("Iniciando aquisicao");
+        Serial.println("Iniciando aquisição...");
         iniciarAquisicao();
+
         while (!aquisicaoCompleta) {
-          yield();
+          yield(); // Evita watchdog reset durante a coleta
         }
-        
-        imprimirDados();
 
-        Serial.print("Enviando dados: ");
-        Serial.println(mqtt_publish_topic);
-        //client.publish(mqtt_publish_topic, (uint8_t*)buffer, sizeof(buffer));
-        //client.publish(mqtt_publish_topic, (byte*)buffer, sizeof(buffer));
-        //enviarBlocos();
-        client.publish(mqtt_publish_topic, "mensagem<<<<<<<");
+        Serial.println("Aquisição finalizada. Publicando blocos...");
+        publicarEmBlocos();
 
-        Serial.println("Aquisicao finalizada");
         ultimoCiclo = millis();
       }
+
       isCollecting = false;
     } else {
-      Serial.println("Botão solto -> publicando desligado");
+      Serial.println("Botão solto");
       client.publish(mqtt_publish_status, "botao desligado");
     }
     lastButtonState = buttonState;
@@ -179,8 +172,6 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("\nTentando conectar ao MQTT...");
     if (client.connect("ESP8266Client", mqtt_user, mqtt_password)) {
-    //Serial.print(String(ESP.getChipId()));
-    //if (client.connect("ESP8266-8285683", mqtt_user, mqtt_password)){
       Serial.println("\nConectado ao broker MQTT");
       client.subscribe(mqtt_subscribe_topic);
       client.publish(mqtt_publish_status, "botao inicializado");
@@ -193,31 +184,17 @@ void reconnect() {
   }
 }
 
-
+// ================= CALLBACK MQTT =================
 void callback(char* topic, byte* payload, unsigned int length) {
-  // Converte o payload para uma string
+  // FIX 7: String "message" agora é local e limpa a cada chamada.
+  // Antes era global e acumulava strings entre chamadas (bug crítico).
+  String message = "";
   for (unsigned int i = 0; i < length; i++) {
     message += (char)payload[i];
   }
-  
-  // Verifica se a mensagem recebida é "coletar" no tópico de comando
+
   if (String(topic) == mqtt_subscribe_topic && message == "coletar") {
     Serial.println("Comando 'coletar' recebido. Iniciando coleta...");
     isCollecting = true;
-    // sampleIndex = 0; // Reinicia o índice para uma nova coleta
-    // previousMicros = micros(); // Sincroniza o tempo inicial
   }
-}
-
-void publishVibrationData() {
-  StaticJsonDocument<256> doc;
-  doc["motor_id"] = "MOTOR_09";
-  
-  JsonArray vib = doc.createNestedArray("vibration_data");
-  vib.add(1.2); vib.add(3.4); vib.add(5.6);  // seus dados
-  
-  char buffer[256];
-  serializeJson(doc, buffer);
-  
-  client.publish("dados/sensor", buffer);  // JSON válido
 }
