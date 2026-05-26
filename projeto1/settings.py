@@ -137,3 +137,26 @@ MQTT_BROKER = '10.42.0.1'
 MQTT_PORT = 1883
 MQTT_USERNAME = 'ramic'
 MQTT_PASSWORD = '123456'
+
+# Para desenvolvimento (cache em memória)
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "mqtt-buffer",
+        "OPTIONS": {
+            "MAX_ENTRIES": 100,  # Máximo de coletas simultâneas no buffer
+            "CULL_FREQUENCY": 10,
+        }
+    }
+}
+
+# Para produção (recomendado: Redis)
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": "redis://127.0.0.1:6379/1",
+#         "OPTIONS": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#         }
+#     }
+# }
