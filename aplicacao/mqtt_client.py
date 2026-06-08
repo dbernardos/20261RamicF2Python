@@ -61,7 +61,7 @@ class MqttClient:
         VibrationCollection.objects.create(
             motor_id=motor_id,
             vibration_data=vibration_data,
-            status='pending'
+            status='processed'
         )
         
         logger.info(f"✅ Coleta #{collection_id} salva: {len(vibration_data)} amostras")

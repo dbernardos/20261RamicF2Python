@@ -75,10 +75,13 @@ void iniciarAquisicao() {
 
 void publicarEmBlocos() {
   int totalBlocos = (N + BLOCO_SIZE - 1) / BLOCO_SIZE;
+  static uint32_t collection_counter = 0;
+  uint32_t collection_id = collection_counter++;
 
   for (int b = 0; b < totalBlocos; b++) {
     // FIX 4: Documento JSON recriado a cada bloco para evitar fragmentação de memória
     StaticJsonDocument<1024> doc;
+	doc["collection_id"] = collection_id;  // Adiciona ID único da coleta
     doc["motor_id"] = motor_id;
     doc["bloco"]    = b;
     doc["total"]    = totalBlocos;
@@ -99,7 +102,7 @@ void publicarEmBlocos() {
     client.publish(mqtt_publish_topic, jsonBuf);
 
     // Pequena pausa para não sobrecarregar o broker e o stack TCP do ESP8266
-    delay(10);
+    delay(5);
     client.loop();
   }
 
