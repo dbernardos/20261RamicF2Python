@@ -1,0 +1,96 @@
+{% extends 'global/base.html' %}
+
+{% block title %}
+  Dashboard de Monitoramento
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">Painel de Controle</h2>
+        <span class="badge bg-primary">Sistema Ativo</span>
+    </div>
+
+    <!-- Grid do Dashboard -->
+    <div class="row g-4">
+        
+        <!-- 1. Coleta Automática -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <a href="{% url 'urlcoleta' %}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 hover-card">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-robot fs-1 text-primary mb-3"></i>
+                        <h5 class="card-title fw-bold">Coleta Automática</h5>
+                        <p class="card-text text-muted small">Iniciar o monitoramento contínuo e agendado dos equipamentos.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 2. Coleta Manual -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <a href="{% url 'urlcoleta' %}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 hover-card">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-hand-index-thumb fs-1 text-success mb-3"></i>
+                        <h5 class="card-title fw-bold">Coleta Manual</h5>
+                        <p class="card-text text-muted small">Realizar uma aquisição de dados pontual e imediata.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 3. Histórico -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <a href="{% url 'urlhistorico' %}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 hover-card">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-graph-up-arrow fs-1 text-info mb-3"></i>
+                        <h5 class="card-title fw-bold">Histórico</h5>
+                        <p class="card-text text-muted small">Visualizar registros, análises de vibração e gráficos anteriores.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 4. Cadastrar Equipamento -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <a href="#" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 hover-card">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-plus-circle-dotted fs-1 text-warning mb-3"></i>
+                        <h5 class="card-title fw-bold">Cadastrar Equipamento</h5>
+                        <p class="card-text text-muted small">Adicionar novos motores, inversores ou sensores ao sistema.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 5. Logout -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <!-- Nota de segurança: Em produção, o ideal é que o logout seja feito via método POST -->
+            <a href="{% url 'urlsair' %}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border border-danger-subtle hover-card">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-box-arrow-right fs-1 text-danger mb-3"></i>
+                        <h5 class="card-title fw-bold text-danger">Logout</h5>
+                        <p class="card-text text-muted small">Encerrar a sessão e sair do sistema com segurança.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+    </div>
+</div>
+
+<!-- Estilo opcional para dar um efeito visual profissional ao passar o mouse -->
+<style>
+    .hover-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .hover-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+</style>
+{% endblock %}

@@ -1,39 +1,118 @@
 {% load bootstrap5 %}
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Sistema de Monitoramento</title>
+
     {% bootstrap_css %}
-</head>
-<body>
+
+    <!-- Bootstrap Icons (Essencial para os ícones visuais) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+    <style>
+      body {
+        /* Gradiente suave e profissional, remetendo a tecnologia e dados */
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+      .login-card {
+        border: none;
+        border-radius: 1rem;
+        backdrop-filter: blur(10px);
+        background-color: rgba(255, 255, 255, 0.95);
+      }
+      .form-control:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+        border-color: #0d6efd;
+      }
+      .btn-primary {
+        padding: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+      }
+    </style>
+  </head>
+  <body>
     <div class="container">
-        <h1>Página de Login</h1>
-
-        <form action="{% url 'urlentrar' %}" method="POST">
-            {% csrf_token %}
-            <div class="mb-3">
-                <input type="text" name="txtUser" placeholder="Digite o seu usuário..." class="form-control" required>
+      <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-5">
+          <!-- Card de Login -->
+          <div class="card login-card shadow-lg p-4 p-md-5">
+            <!-- Cabeçalho com Branding -->
+            <div class="text-center mb-4">
+        
+              <h3 class="fw-bold text-dark">Acesso ao Sistema</h3>
+              <p class="text-muted small">Monitoramento e Análise de Dados IoT</p>
             </div>
 
-            <div class="mb-3">
-                <input type="password" name="txtPass" placeholder="Digite a sua senha..." class="form-control" required>
-            </div>
-
-            <div class="mb-3">
-                <input type="submit" value="🏃‍♂️‍➡️ Entrar" class="btn btn-primary">
-                <a href="{% url 'urlcadastrarUsuario' %}" class="btn btn-success">➕ Cadastrar</a>
-            </div>
-        </form>
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-danger">
-                    {{ message }}
+            <!-- Mensagens do Django (Dinâmico) -->
+            {% if messages %}
+              {% for message in messages %}
+                <!-- Usa a tag da mensagem (error, success, warning) ou 'danger' como padrão -->
+                <div class="alert alert-{{ message.tags|default:'danger' }} alert-dismissible fade show rounded-3 d-flex align-items-center" role="alert">
+                  <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                  <div class="flex-grow-1">{{ message }}</div>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
                 </div>
-            {% endfor %}
-        {% endif %}
+              {% endfor %}
+            {% endif %}
+
+            <!-- Formulário -->
+            <form action="{% url 'urlentrar' %}" method="POST" novalidate>
+              {% csrf_token %}
+
+              <!-- Campo Usuário -->
+              <div class="mb-4">
+                <label for="txtUser" class="form-label text-muted small fw-bold text-uppercase">Usuário</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
+                  <input type="text" id="txtUser" name="txtUser" class="form-control border-start-0" placeholder="Digite seu usuário" required autocomplete="username" />
+                </div>
+              </div>
+
+              <!-- Campo Senha -->
+              <div class="mb-4">
+                <label for="txtPass" class="form-label text-muted small fw-bold text-uppercase">Senha</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
+                  <input type="password" id="txtPass" name="txtPass" class="form-control border-start-0" placeholder="Digite sua senha" required autocomplete="current-password" />
+                </div>
+              </div>
+
+              <!-- Botão de Entrar -->
+              <div class="d-grid mb-3">
+                <button type="submit" class="btn btn-primary rounded-3"><i class="bi bi-box-arrow-in-right me-2"></i> Entrar no Sistema</button>
+              </div>
+
+              <!-- Link de Cadastro -->
+              <div class="text-center">
+                <span class="text-muted small">Ainda não possui acesso?</span>
+                <a href="{% url 'urlcadastrarUsuario' %}" class="text-decoration-none fw-bold ms-1">Solicitar cadastro</a>
+              </div>
+            </form>
+          </div>
+
+          <!-- Rodapé discreto -->
+          <div class="text-center mt-4">
+            <small class="text-muted">&copy; 2026 - Sistema de Monitoramento Industrial</small>
+          </div>
+        </div>
+      </div>
     </div>
-</body>
+
+    <!-- JavaScript do Bootstrap (Necessário para fechar os alertas e funcionalidades interativas) -->
+    {% bootstrap_javascript %}
+  </body>
 </html>
