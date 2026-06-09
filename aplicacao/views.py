@@ -134,9 +134,11 @@ def grafico(request, pk):
     return render(request, 'grafico.html', context)
 
 def geragraficos(dfa, eixo='x', cor='blue', posicao='Axial', intervalo_grade=60):
-    fs = 1000  # frequência de amostragem HZ
+    fs = 2000  # frequência de amostragem HZ
 
     signal = dfa.values
+    # signal = signal - 512
+    print(signal)
     signal = signal - np.mean(signal)
     
     # Aplicar janela de Hann para reduzir vazamento espectral
