@@ -133,7 +133,7 @@ def grafico(request, pk):
     }
     return render(request, 'grafico.html', context)
 
-def geragraficos(dfa, eixo='x', cor='blue', posicao='Axial', intervalo_grade=60):
+def geragraficos2(dfa, eixo='x', cor='blue', posicao='Axial', intervalo_grade=60):
     fs = 2000  # frequência de amostragem HZ
 
     signal = dfa.values
@@ -195,3 +195,81 @@ def geragraficos(dfa, eixo='x', cor='blue', posicao='Axial', intervalo_grade=60)
 
     # q = request.POST.get('q', '')
     # return redirect(f"{reverse('painel')}?q={q}")
+
+def geragraficos(dfa, eixo='x', cor='blue', posicao='Axial', intervalo_grade=60):
+    # ------------------------------------------------------------------
+    # Parâmetros de aquisição e do circuito de condicionamento
+    # ------------------------------------------------------------------
+    fs   = 2000   # frequência de amostragem em Hz
+                  # CORRIGIDO: era 1000, causando eixo X com metade do valor real
+
+    VREF = 3.3    # tensão de referência do ADC (V)
+    BITS = 1024   # resolução do ADC (10 bits → 2^10)
+    GANHO = 1.5   # ganho do amplificador de condicionamento
+                  # calculado a partir do esquemático: R5/R3 = 15kΩ / 10kΩ
+
+    # ------------------------------------------------------------------
+    # 1. Remoção do offset DC
+    #    O circuito polariza o sinal em VCC/2 (~512 counts) para que o
+    #    sinal AC do sensor ocupe toda a faixa do ADC (0 a 1023).
+    #    A subtração da média remove esse offset antes da FFT.
+    # ------------------------------------------------------------------
+    signal = dfa.values.astype(float)
+    signal = signal - np.mean(signal)
+
+    # ------------------------------------------------------------------
+    # 2. Conversão de contagens ADC para Volts
+    #    Desfaz o ganho do amplificador para expressar o sinal na escala
+    #    de tensão real na saída do sensor piezoelétrico.
+    # ------------------------------------------------------------------
+    signal_v = signal * (VREF / BITS) / GANHO
+
+    # ------------------------------------------------------------------
+    # 3. Janela de Hann
+    #    Reduz o vazamento espectral causado pela descontinuidade nas
+    #    bordas do bloco de amostras.
+    # ------------------------------------------------------------------
+    N = len(signal_v)
+    window = np.hanning(N)
+    signal_windowed = signal_v * window
+
+    # ------------------------------------------------------------------
+    # 4. FFT unilateral (somente frequências positivas)
+    # ------------------------------------------------------------------
+    yf = np.fft.rfft(signal_windowed)
+    xf = np.fft.rfftfreq(N, 1 / fs)
+
+    # ------------------------------------------------------------------
+    # 5. Magnitude normalizada pelo fator de correção da janela
+    #    CORRIGIDO: era np.abs(yf) sem normalização, o que fazia a
+    #    amplitude escalar com N e perder sentido físico.
+    #    A normalização por sum(window) corrige o ganho introduzido pela
+    #    janela, e o fator 2 compensa o descarte das frequências negativas
+    #    no espectro unilateral.
+    # ------------------------------------------------------------------
+    magnitude = (2 / np.sum(window)) * np.abs(yf)
+
+    # ------------------------------------------------------------------
+    # 6. Plot
+    # ------------------------------------------------------------------
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(xf, magnitude, color=cor, linewidth=1.5)
+    plt.title(
+        f'Espectro de Frequência - Eixo {eixo} ({posicao})',
+        fontsize=14, fontweight='bold'
+    )
+    ax.set_xlabel('Frequência (Hz)', fontsize=12)
+    ax.set_ylabel('Amplitude (V)', fontsize=12)  # CORRIGIDO: era 'Magnitude'
+    ax.set_xlim(0, fs / 2)
+
+    ax.margins(0)
+    max_x = fs / 2
+    ticks = np.arange(0, max_x + intervalo_grade, intervalo_grade)
+    ax.set_xticks(ticks)
+    ax.grid(True, axis='x', linestyle='-', linewidth=0.8, color='gray', alpha=0.5)
+    ax.grid(True, axis='y', linestyle='-', linewidth=0.8, color='gray', alpha=0.5)
+    plt.tight_layout()
+    grafico_base64 = plot_to_base64(plt.gcf())
+    plt.close(fig)  # Fecha a figura para liberar memória
+
+    return grafico_base64
