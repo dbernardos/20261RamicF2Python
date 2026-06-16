@@ -101,7 +101,6 @@ class MqttClient:
         timer.start()
 
     def handle_message(self, topic, payload):
-        """Processa mensagens MQTT e agrupa blocos antes de salvar"""
         from .models import VibrationCollection
         
         if topic == "dados/sensor":
@@ -112,17 +111,28 @@ class MqttClient:
             total_blocos = data.get('total')
             vibration_chunk = data.get('vibration_data', [])
             
-            # Validações básicas
             if bloco_idx is None or total_blocos is None:
                 logger.warning("❌ Mensagem sem metadados de bloco, ignorando")
                 return
             
-            # Gera ID único para esta coleta (motor_id + timestamp aproximado)
-            # O Arduino poderia enviar um "collection_id", mas vamos derivar do tempo
-            collection_id = f"{motor_id}_{int(time.time() // (BLOCK_TIMEOUT * 2))}"
-            cache_key = self._get_cache_key(motor_id, collection_id)
+            # Chave de "coleta ativa" por motor — independente de timestamp
+            active_key = f"{CACHE_PREFIX}active:{motor_id}"
             
-            # Tenta obter buffer existente ou cria novo
+            if bloco_idx == 0:
+                # Bloco 0 sempre abre uma nova coleta
+                collection_id = f"{motor_id}_{int(time.time())}"
+                cache.set(active_key, collection_id, timeout=BLOCK_TIMEOUT * 2)
+                logger.info(f"🆕 Nova coleta iniciada: {collection_id}")
+            else:
+                # Blocos seguintes buscam a coleta ativa deste motor
+                collection_id = cache.get(active_key)
+                if collection_id is None:
+                    # Bloco chegou sem o bloco 0 (perdido ou timeout) — abre nova
+                    collection_id = f"{motor_id}_{int(time.time())}"
+                    cache.set(active_key, collection_id, timeout=BLOCK_TIMEOUT * 2)
+                    logger.warning(f"⚠️ Bloco {bloco_idx} sem coleta ativa, criando: {collection_id}")
+            
+            cache_key = self._get_cache_key(motor_id, collection_id)
             buffer = cache.get(cache_key)
             is_new_collection = buffer is None
             
@@ -133,22 +143,18 @@ class MqttClient:
                     'blocks': {},
                     'first_received': time.time()
                 }
-                logger.info(f"🆕 Nova coleta iniciada: {collection_id} (esperando {total_blocos} blocos)")
             
-            # Armazena o bloco recebido (evita duplicatas)
             if str(bloco_idx) not in buffer['blocks']:
                 buffer['blocks'][str(bloco_idx)] = vibration_chunk
                 logger.debug(f"📥 Bloco {bloco_idx}/{total_blocos} armazenado")
             
-            # Atualiza cache com timeout estendido a cada novo bloco
             cache.set(cache_key, buffer, timeout=BLOCK_TIMEOUT)
             
-            # Se for a primeira mensagem, agenda timeout handler
             if is_new_collection:
                 self._schedule_timeout_check(motor_id, collection_id, buffer)
             
-            # Verifica se completou a coleta
             if self._check_and_assemble(motor_id, collection_id, buffer):
+                cache.delete(active_key)  # Limpa a coleta ativa ao concluir
                 logger.info(f"🎯 Coleta {collection_id} COMPLETA e salva!")
 
     def on_disconnect(self, client, userdata, rc):
