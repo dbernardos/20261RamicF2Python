@@ -14,6 +14,7 @@ urlpatterns = [
     path('historico/', views.historico, name='urlhistorico'),
     path('coleta/', views.coleta, name='urlcoleta'),
     path('coletaManual/', views.coletaManual, name='urlcoletaManual'),
+    path('coleta/excluir/<int:pk>/', views.excluir_coleta, name='urlexcluirColeta'),
 
 ]
 

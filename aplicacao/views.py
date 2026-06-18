@@ -6,6 +6,9 @@ from django.contrib import messages
 from .form import UsuarioForm
 from .mqtt_client import MqttClient
 from django.urls import reverse
+from django.views.decorators.http import require_POST
+import paho.mqtt.publish as publish
+from django.conf import settings
 
 import numpy as np
 import pandas as pd
@@ -25,6 +28,21 @@ from .models import VibrationCollection
 def historico(request):
     collections = VibrationCollection.objects.all()
     return render(request, 'historico.html', {'collections': collections})
+
+@require_POST
+def excluir_coleta(request, pk):
+    """View para excluir uma coleta de vibração"""
+    coleta = get_object_or_404(VibrationCollection, pk=pk)
+    motor_id = coleta.motor_id  # Guarda para redirecionamento
+    
+    try:
+        coleta.delete()
+        messages.success(request, f'Coleta #{pk} excluída com sucesso!')
+    except Exception as e:
+        messages.error(request, f'Erro ao excluir coleta: {str(e)}')
+    
+    # Redireciona de volta para o histórico
+    return redirect('urlhistorico')  # Ajuste o nome da URL conforme seu projeto
 
 @login_required(login_url="urlentrar")
 def coletaManual(request):
@@ -61,11 +79,25 @@ def coletaManual(request):
 # ---------------------- CONFIGURAÇÕES MQTT ----------------------
 @login_required(login_url="urlentrar")
 def coleta(request):
-    comando = "coletar"
-    topico = "comando/sensor"
-    cliente = MqttClient()
-    cliente.connect()
-    cliente.publish(topico, comando)
+    #comando = "coletar"
+    #topico = "comando/sensor"
+    #cliente = MqttClient()
+    #cliente.connect()
+    #cliente.publish(topico, comando)
+
+    try:
+        publish.single(
+            topic="comando/sensor",
+            payload="coletar",
+            hostname=settings.MQTT_BROKER,
+            port=settings.MQTT_PORT,
+            auth={
+                'username': settings.MQTT_USERNAME,
+                'password': settings.MQTT_PASSWORD,
+            },
+        )
+    except Exception as e:
+        messages.error(request, f"Erro ao enviar comando MQTT: {e}")
 
     return render(request, 'index.html')
 
@@ -260,10 +292,12 @@ def geragraficos(dfa, eixo='x', cor='blue', posicao='Axial', intervalo_grade=60)
     )
     ax.set_xlabel('Frequência (Hz)', fontsize=12)
     ax.set_ylabel('Amplitude (V)', fontsize=12)  # CORRIGIDO: era 'Magnitude'
-    ax.set_xlim(0, fs / 2)
-
+    # max_x = fs / 2
+    # ax.set_xlim(0, fs / 2)
+    max_x = 600
+    ax.set_xlim(0, max_x)
     ax.margins(0)
-    max_x = fs / 2
+    
     ticks = np.arange(0, max_x + intervalo_grade, intervalo_grade)
     ax.set_xticks(ticks)
     ax.grid(True, axis='x', linestyle='-', linewidth=0.8, color='gray', alpha=0.5)
